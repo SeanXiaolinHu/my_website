@@ -1,0 +1,155 @@
+---
+categories:  
+- ""    #the front matter should be like the one found in, e.g., blog2.md. It cannot be like the normal Rmd we used
+- ""
+date: "2021-09-30"
+description: GDP analysis # the title that will show up once someone gets to this page
+draft: false
+image: gdp.jpg # save picture in \static\img\blogs. Acceptable formats= jpg, jpeg, or png . Your iPhone pics wont work
+
+keywords: ""
+slug: gdp # slug is the shorthand URL address... no spaces plz
+title: GDP analysis
+---
+
+At the risk of oversimplifying things, the main components of gross domestic product, GDP are personal consumption (C), business investment (I), government spending (G) and net exports (exports - imports). You can read more about GDP and the different approaches in calculating at the [Wikipedia GDP page](https://en.wikipedia.org/wiki/Gross_domestic_product).
+
+The GDP data we will look at is from the [United Nations' National Accounts Main Aggregates Database](https://unstats.un.org/unsd/snaama/Downloads), which contains estimates of total GDP and its components for all countries from 1970 to today. We will look at how GDP and its components have changed over time, and compare different countries and how much each component contributes to that country's GDP. The file we will work with is [GDP and its breakdown at constant 2010 prices in US Dollars](http://unstats.un.org/unsd/amaapi/api/file/6) and it has already been saved in the Data directory. Have a look at the Excel file to see how it is structured and organised
+
+```{r read_GDP_data,include=FALSE}
+library(tidyverse)  # Load ggplot2, dplyr, and all the other tidyverse packages
+library(mosaic)
+library(ggthemes)
+library(GGally)
+library(readxl)
+library(here)
+library(skimr)
+library(janitor)
+library(broom)
+library(tidyquant)
+library(infer)
+library(openintro)
+library(kableExtra)
+
+```
+
+The first thing you need to do is to tidy the data, as it is in wide format and you must make it into long, tidy format. Please express all figures in billions (divide values by `1e9`, or $10^9$), and you want to rename the indicators into something shorter.
+
+```{r reshape_GDP_data}
+
+UN_GDP_data  <-  read_excel(here::here("data", "Download-GDPconstant-USD-countries.xlsx"), # Excel filename
+                sheet="Download-GDPconstant-USD-countr", # Sheet name
+                skip=2) # Number of rows to skip
+
+
+tidy_GDP_data <- UN_GDP_data %>% 
+  # change the dataset to long format
+  pivot_longer(cols = 4:51, #columns 4 to 51
+               names_to = "Year",
+               values_to = "Value") %>% 
+  
+  # express all figures in billions and rename the indicators into something shorter
+  mutate(Value = Value / 1e9,
+         Year = as.integer(Year),
+         IndicatorName_short = gsub("\\(.*","",IndicatorName),
+         IndicatorName_short = case_when(
+           IndicatorName_short == "Gross Domestic Product " ~ "GDP",
+           IndicatorName_short == "Imports of goods and services" ~ "Imports",
+           IndicatorName_short == "Exports of goods and services" ~ "Exports",
+           IndicatorName_short == "Household consumption expenditure " ~ "Household expenditure",
+           IndicatorName_short == "General government final consumption expenditure" ~ "Government expenditure",
+           TRUE ~ IndicatorName_short
+         ))
+
+
+glimpse(tidy_GDP_data)
+
+
+# Let us compare GDP components for these 3 countries
+country_list <- c("United States","India", "Germany")
+```
+
+First, can you produce this plot?
+
+```{r gdp_components}
+
+tidy_GDP_data %>%
+  # filter country and components first
+  filter(Country %in% country_list & 
+           IndicatorName_short %in% c('Gross capital formation','Exports','Government expenditure','Household expenditure','Imports')) %>% 
+  # then start plotting
+  ggplot(aes(x = Year, y = Value, colour = IndicatorName_short)) +
+  # use line chart
+  geom_line(size = 1.05) +
+  # faceted by country
+  facet_wrap(~Country) +
+  # use bw theme
+  theme_bw() +
+  # add titles and other interpretaion info
+    labs(
+    title = "GDP components over time",
+    subtitle = "In constant 2010 USD",
+    x = "",
+    y = "Billion US$"
+  ) +
+  # add the legend title
+  guides(colour = guide_legend(title="Components of GDP"))  +
+  # set the color for each component
+  scale_colour_manual(
+    values = c("Gross capital formation" = "#F8766D",
+    "Exports" = "#A3A500",
+    "Government expenditure" = "#00BF7D",
+    "Household expenditure" = "#00B0F6",
+    "Imports" = "#E76BF3"
+  )) +
+  # set the aspect ration fixed and the format of title and other elements
+  theme(
+    aspect.ratio = 3, 
+    strip.text = element_text(size = 7),
+    plot.subtitle = element_text(size = 8),
+    axis.text.x = element_text(size = 6),
+    axis.text.y = element_text(size = 6),
+    plot.title = element_text(size = 12, face = 'bold')) +
+  NULL
+```
+
+Secondly, recall that GDP is the sum of Household Expenditure (Consumption *C*), Gross Capital Formation (business investment *I*), Government Expenditure (G) and Net Exports (exports - imports). Even though there is an indicator `Gross Domestic Product (GDP)` in your dataframe, I would like you to calculate it given its components discussed above.
+```{r calculate GDP}
+library(kableExtra)
+
+tidy_GDP_data_2 <- tidy_GDP_data %>% 
+  # delete the unnecessary column
+  select(-IndicatorName) %>% 
+  # Change the data from Long to Wide Format for simple calculations
+  pivot_wider(names_from = IndicatorName_short, values_from = Value) %>% 
+  # Then we calculate the Net Exports, GDP, and Percentage Change in the GDP
+  mutate(`Net Exports` = Exports - Imports,
+         `Calculated GDP` = `Household expenditure` + `Gross capital formation` + `Government expenditure` + `Net Exports`,
+         `Percentage Change` = (`Calculated GDP` - `GDP`)/`GDP`)
+
+# Styled Summary Statistics
+mosaic::favstats(~`Percentage Change`, data=tidy_GDP_data_2) %>% 
+  kbl(caption = "overall summary statistics for the % difference between calculated and included GDP") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+> What is the % difference between what you calculated as GDP and the GDP figure included in the dataframe?
+   
+   There is around 0% difference on average between the calculated GDP and GDP figure in the dataframe with a small standard deviation, which indicates they are roughly the same value. 
+
+> What is this last chart telling you? Can you explain in a couple of paragraphs the different dynamic among these three countries?
+
+Household Expenditure has accounted for the majority of the GDP for all three countries, and the components of their GDP have generally been the same. However, the trend is different. 
+
+For the proportion of Household Expenditures, India has decreased, Germany stays relatively constant and the U.S. has increased slightly. The reason could be U.S. people have more and more disposable income to spend as years go by and spend more money on daily shopping. 
+
+At the same time, the proportion of Gross Capital Formation experienced a surge in 2008, and it is probably due to the financial crisis. As the capital market broke down in the western countries, some foreign capital went into the Indian market and accounted for a large portion of the national GDP. As we can see, this portion has been going down as the economy recovers.
+
+For Germany, the Net Exports has been taking a larger portion of GDP but is still below 10%. It represents that Germany government is probably developing their export strategy. 
+
+For the U.S., Gross Capital formation has taken a larger portion than Government Expenditure since 1995. The U.S. government always has a debt issue and has been purposely control their government expenditure.  
+
+
+> If you want to, please change `country_list <- c("United States","India", "Germany")` to include your own country and compare it with any two other countries you like
+
+If we replace Germany with China, we can see there have been some changes. The GDP of China has been rapidly increasing since 2010 with capital formation in the leading  position. The household expenditure has been exceeding capital formation until 2002. It is probably due to Chinese governments attention to domestic financial markets.

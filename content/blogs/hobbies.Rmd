@@ -1,0 +1,62 @@
+---
+categories:  
+- ""    #the front matter should be like the one found in, e.g., blog2.md. It cannot be like the normal Rmd we used
+- ""
+date: "2021-09-30"
+description: Hobbies # the title that will show up once someone gets to this page
+draft: false
+image: hobby1.jpg # save picture in \static\img\blogs. Acceptable formats= jpg, jpeg, or png . Your iPhone pics wont work
+
+keywords: ""
+slug: hobby # slug is the shorthand URL address... no spaces plz
+title: Hobbies
+---
+
+As introduced in the bio part, I love listening to music and watch movies! My favorite music genres are pop, country and house, and the most frequent song I have kept listening to is Love Story by Taylor Swift. As for movies, I really love action movies and thrillers, and I swear I will go to watch Dune after the finals!
+
+In terms of outside activities, I like playing badminton and running, and recently I have started doing gym to try to build more muscles! It's worth speaking that I also have a weird hobby in public transportation! Sometimes, I would rather spend a whole afternoon watching trains passing by or sitting at the front row of bus to watch the city.
+
+Recently, I have also try to develop some new hobbies. For example, I am learning video clipping now and bacame a new video creator in Bilibili, one of the most popular video platforms in China. If I successfully find a job, I also want to learn dancing.
+
+By the way, I also like photography and travelling, below you can find some photos I took:
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE, 
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+options(digits = 3)
+
+# default figure size
+knitr::opts_chunk$set(
+  fig.align = "center"
+)
+```
+
+```{r out.width='70%',echo=FALSE}
+knitr::include_graphics("/img/hobby2.jpg",error =FALSE)
+```
+
+
+```{r out.width='70%',echo=FALSE}
+knitr::include_graphics("/img/hobby3.jpg",error =FALSE)
+```
+
+
+```{r out.width='70%',echo=FALSE}
+knitr::include_graphics("/img/hobby4.jpg",error =FALSE)
+```
+
+
+```{r out.width='70%',echo=FALSE}
+knitr::include_graphics("/img/hobby5.jpg",error =FALSE)
+```
+
+
+```{r out.width='70%',echo=FALSE}
+knitr::include_graphics("/img/hobby6.jpg",error =FALSE)
+```
+
+
+

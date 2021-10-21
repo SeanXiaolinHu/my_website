@@ -1,0 +1,41 @@
+---
+categories:  
+- ""    #the front matter should be like the one found in, e.g., blog2.md. It cannot be like the normal Rmd we used
+- ""
+date: "2021-09-30"
+description: Business experience # the title that will show up once someone gets to this page
+draft: false
+image: career1.jpg # save picture in \static\img\blogs. Acceptable formats= jpg, jpeg, or png . Your iPhone pics wont work
+
+keywords: ""
+slug: career # slug is the shorthand URL address... no spaces plz
+title: Business experience
+---
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE, 
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+options(digits = 3)
+
+# default figure size
+knitr::opts_chunk$set(
+  fig.align = "center"
+)
+```
+
+Hi everyone! As a MFA student from LBS, my career goal may be a a little bit different from that of my cohort. After conducting several internships in both finance and tech industry, I find Big Tech and Fintech really attracting to me. 
+
+During my past study and interns, I have cultivated my learning ability and also sharpened my logical thinking mindset. With all the techniques I developed including Python, R, SQL, etc. and my communication skills, I am committed to find a role as a business analyst in a tech company, especially within the fintech sector.
+
+Below you can kindly find my CV:
+
+
+```{r out.width='80%',echo=FALSE}
+knitr::include_graphics("/img/cv.jpg",error =FALSE)
+
+```
+
+
+

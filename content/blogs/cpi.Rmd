@@ -1,0 +1,167 @@
+---
+categories:  
+- ""    #the front matter should be like the one found in, e.g., blog2.md. It cannot be like the normal Rmd we used
+- ""
+date: "2021-09-30"
+description: CPI analysis # the title that will show up once someone gets to this page
+draft: false
+image: cpi.jpg # save picture in \static\img\blogs. Acceptable formats= jpg, jpeg, or png . Your iPhone pics wont work
+
+keywords: ""
+slug: cpi # slug is the shorthand URL address... no spaces plz
+title: CPI analysis
+---
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE, 
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+options(digits = 3)
+
+# default figure size
+knitr::opts_chunk$set(
+  fig.width=6.75, 
+  fig.height=8.75,
+  fig.align = "center"
+)
+```
+
+```{r load-libraries, include=FALSE}
+library(tidyverse)  # Load ggplot2, dplyr, and all the other tidyverse packages
+library(mosaic)
+library(ggthemes)
+library(lubridate)
+library(here)
+library(skimr)
+library(janitor)
+library(httr)
+library(readxl)
+library(vroom)
+
+# library the necessary packages to scrape the page and modify string
+library(rvest) 
+library(stringr)
+library(ggtext)
+library(scales)
+
+```
+
+Remember how we used the tidyqant package to download CPI data. In this exercise, I would like you to do the following:
+
+1.  You can find [CPI components at FRED](https://fredaccount.stlouisfed.org/public/datalist/843). You should adapt the code from German polls to scrape the FRED website and pull all of the CPI components into a vector. FIY, the list of components is the second table in that webpage.
+2.  Once you have a vector of components, you can then pass it to `tidyquant::tq_get(get = "economic.data", from =  "2000-01-01")` to get all data since January 1, 2000
+3.  Since the data you download is an index with various starting dates, you need to calculate the yearly, or 12-month change. To do this you need to use the `lag` function, and specifically, `year_change = value/lag(value, 12) - 1`; this means you are comparing the current month's value with that 12 months ago lag(value, 12).
+4.  I want you to order components so the higher the yearly change, the earlier does that component appear.
+5.  You should also make sure that the **All Items** CPI (CPIAUCSL) appears first.
+6.  Add a `geom_smooth()` for each component to get a sense of the overall trend. 1 You may want to colour the points according to whether yearly change was positive or negative.
+
+Having done this, you should get this graph.
+
+```{r cpi, out.width="100%"}
+
+# save the url
+url <- "https://fredaccount.stlouisfed.org/public/datalist/843"
+
+# read the table
+tables <- url %>% 
+  read_html() %>% 
+  html_nodes(css = "table")
+
+# parse HTML tables into a dataframe called cpi_data
+# Use purr::map() to create a list of all tables in URL
+cpi_data <- map(tables, . %>% 
+             html_table(fill = TRUE)%>% 
+             janitor::clean_names())
+
+# we need the second table
+cpi_components <- cpi_data[[2]]['series_id'] %>%
+  tidyquant::tq_get(get = "economic.data", from = "2000-01-01")
+
+# then we need to add titles of cpi components
+cpi_components_with_titles <- cpi_components %>%
+  inner_join(cpi_data[[2]][c('series_id','title')],by = 'series_id') %>% 
+  # then do the string processing to get the proper title
+  mutate(title = str_sub(title,47,-22)) %>% 
+  # then we calculate the yearly change of the CPI
+  mutate(year_change = price/lag(price, 12) - 1) %>% 
+  # and order components
+  arrange(desc(year_change))
+
+# then make all items appear first
+# first extract rows of all items
+cpi_all_items <- cpi_components_with_titles %>% 
+  subset(series_id == "CPIAUCSL")
+# then delete these rows in original df
+cpi_without_all <- cpi_components_with_titles %>% 
+  filter(series_id != "CPIAUCSL")
+# then put the table of all items at the top of the latter one
+cpi_components_sorted <- rbind(cpi_all_items,cpi_without_all)
+
+# calculate the max of yoy change per component to get the order of labels later in the subplots
+cpi_componets_order <- cpi_components_sorted %>% 
+  # filter the data according to date at first
+  filter(date >= as.Date("2016-01-01") & date <= as.Date("2021-08-01")) %>% 
+  # group by title
+  group_by(title) %>% 
+  # calculate the max
+  summarise(change = max(year_change, na.rm = TRUE)) %>%
+  # display in desc order
+  arrange(desc(change))
+
+# create the subplot order
+subplot_order1 <- cpi_componets_order['title'] %>%
+  # delete all items in the df
+  filter(title != "All Items")
+# add the all items to the top row and get the order
+subplot_order <- rbind('All Items', subplot_order1)
+# add levels to the title column of the original df
+cpi_components_sorted$title <-
+  factor(cpi_components_sorted$title,
+    ordered = TRUE,
+    levels = subplot_order$title,
+    labels = subplot_order$title)
+
+
+# finally we make the plot
+cpi_components_sorted %>% 
+  # filter the data according to date at first
+  filter(date >= as.Date("2016-01-01") & date <= as.Date("2021-08-01")) %>% 
+  # add a new column to indicate the direction of the yearly change
+  mutate(direction = sign(year_change)) %>% 
+  # create a ggplot object
+  ggplot(aes(x = date, y = year_change)) +
+  # scatter plot
+  geom_point(aes(colour = factor(direction))) +
+  # display y-axis in %
+  scale_y_continuous(labels = percent) +
+  # define the color by yoy direction
+  scale_color_manual(values = alpha(c('#98C2F3','#DA5C5D'),.7)) +
+  # add a smooth line
+  geom_smooth(fill = NA, col = '#999999') +
+  # faceted by components - by the title columns with levels preset
+  facet_wrap(~title, scales = 'free',nrow = 7, ncol = 7) +
+  # use the bw theme
+  theme_bw() +
+  # add titles and other info
+  labs(
+    title = "Yearly change of US CPI (All Items) and its components",
+    subtitle = "YoY change being <span style='color:#DA5C5D'>positive</span> or <span style='color:#98C2F3'>negative</span>   
+    Jan 2016 to Aug 2021",
+    caption = "Data from St. Louis Fed FRED\nhttps://fredaccount.stlouisfed.org/public/datalist/843",
+    x = "",
+    y = "YoY % Change"
+  ) +
+  # set the aspect ration fixed and the format of title, subtitle, facet label, x-axis and y-axis
+  theme(
+    aspect.ratio = 0.3, 
+    legend.position = "none", 
+    plot.title = element_text(size = 16, face = 'bold'),
+    plot.subtitle = element_markdown(lineheight = 1.1),
+    strip.text = element_text(size = 4),
+    axis.text.x = element_text(size = 4),
+    axis.text.y = element_text(size = 4)) +
+  NULL
+
+```
