@@ -114,7 +114,7 @@ tidy_GDP_data %>%
 ```
 
 Secondly, recall that GDP is the sum of Household Expenditure (Consumption *C*), Gross Capital Formation (business investment *I*), Government Expenditure (G) and Net Exports (exports - imports). Even though there is an indicator `Gross Domestic Product (GDP)` in your dataframe, I would like you to calculate it given its components discussed above.
-```{r calculate GDP}
+```{r}
 library(kableExtra)
 
 tidy_GDP_data_2 <- tidy_GDP_data %>% 
