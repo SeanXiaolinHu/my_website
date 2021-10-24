@@ -16,8 +16,8 @@ params:
     address:
       - city: London
         country: United Kingdom
-        street: Salisbury Street
-        title: Lea House
+        street: Park Road
+        title: London Business School
     buttonClear: Clear
     buttonSend: Send message
     email:
